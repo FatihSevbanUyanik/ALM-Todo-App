@@ -1,0 +1,75 @@
+version: '3'
+services:
+  
+  mongo-server:
+    image: 'mongo:latest'
+    ports:
+      - 27017:27017
+
+  mongo-server-test:
+    image: 'mongo:latest'
+
+  backend: 
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - 8080:8080
+    volumes:
+      - /app/node_modules
+      - ./backend:/app
+    environment:
+      - MONGO_HOST=mongodb://mongo-server
+      - SERVER_PORT=8080
+
+  backend-test: 
+    depends_on:
+      - mongo-server-test
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./backend:/app
+    environment:
+      - MONGO_HOST=mongodb://mongo-server-test
+      - SERVER_PORT=3000
+    command: ['npm', 'test']
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./frontend:/app
+    ports:
+      - 8081:8081
+    environment:
+      - BASE_URL=http://localhost:8080
+      - CONTEXT_PATH=todoApp
+
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./frontend:/app
+    environment:
+      - BASE_URL=http://localhost:8080
+      - CONTEXT_PATH=todoApp
+    command: ['npm', 'run', 'test:unit']
+  
+  nginx: 
+    depends_on:
+      - backend
+      - frontend
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.dev
+    ports:
+      - 80:80
+    restart: always
+
+    
